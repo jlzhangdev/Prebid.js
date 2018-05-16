@@ -4,8 +4,19 @@ import { VIDEO, BANNER } from 'src/mediaTypes';
 import * as utils from 'src/utils';
 
 describe('ebdrBidAdapter', () => {
-  let bidRequests;
-
+  let bidRequests, bidderRequest = {};
+  function createGdprBidderRequest(gdprApplies) {
+    if (typeof gdprApplies === 'boolean') {
+      bidderRequest['gdprConsent'] = {
+        'consentString': 'BOJ/P2HOJ/P2HABABMAAAAAZ+A==',
+        'gdprApplies': gdprApplies
+      };
+    } else {
+      bidderRequest['gdprConsent'] = {
+        'consentString': 'BOJ/P2HOJ/P2HABABMAAAAAZ+A=='
+      };
+    }
+  }
   beforeEach(() => {
     bidRequests = [
       {
@@ -92,8 +103,15 @@ describe('ebdrBidAdapter', () => {
         bidRequests[0].mediaTypes = { banner: {} };
         const requests = spec.buildRequests(bidRequests);
         const bidRequest = {};
-        bidRequest['2c5e8a1a84522d'] = { mediaTypes: BANNER, w: null, h: null };
-        expect(requests.bids['2c5e8a1a84522d']).to.deep.equals(bidRequest['2c5e8a1a84522d']);
+        const data = {
+          id: '2c5e8a1a84522d',
+          banner: {
+            w: null,
+            h: null
+          },
+          bidfloor: '1.00'
+        };
+        expect(requests.bids.imp[0]).to.deep.equals(data);
       });
       it('should create a single GET', () => {
         bidRequests[0].mediaTypes = { banner: {} };
@@ -108,8 +126,59 @@ describe('ebdrBidAdapter', () => {
         bidRequest.mediaTypes = { banner: {sizes: [[ width, height ]]} };
         const requests = spec.buildRequests([ bidRequest ]);
         const data = {};
-        data['2c5e8a1a84522d'] = { mediaTypes: BANNER, w: width, h: height };
-        expect(requests.bids['2c5e8a1a84522d']).to.deep.equal(data['2c5e8a1a84522d']);
+        data['imp'] = [
+          {
+            id: '2c5e8a1a84522d',
+            banner: {
+              w: 640,
+              h: 480
+            },
+            bidfloor: '1.00'
+          }
+        ];
+        expect(requests.bids.imp).to.deep.equal(data['imp']);
+      });
+      it('support gdpr request', () => {
+        createGdprBidderRequest(true);
+        const width = 640;
+        const height = 480;
+        const bidRequest = bidRequests[0];
+        bidRequest.mediaTypes = { banner: {sizes: [[ width, height ]]} };
+        const requests = spec.buildRequests([ bidRequest ], bidderRequest);
+        const data = {};
+        data['imp'] = [
+          {
+            id: '2c5e8a1a84522d',
+            banner: {
+              w: 640,
+              h: 480
+            },
+            bidfloor: '1.00'
+          }
+        ];
+        data['imp'] = [
+          {
+            id: '2c5e8a1a84522d',
+            banner: {
+              w: 640,
+              h: 480
+            },
+            bidfloor: '1.00'
+          }
+        ];
+        data['regs'] = {
+          'ext': {
+            'gdpr': true
+          }
+        };
+        data['user'] = {
+          'ext': {
+            'consent': 'BOJ/P2HOJ/P2HABABMAAAAAZ+A=='
+          }
+        };
+        expect(requests.bids.imp).to.deep.equal(data['imp']);
+        expect(requests.bids.regs).to.deep.equal(data['regs']);
+        expect(requests.bids.user).to.deep.equal(data['user']);
       });
     });
     describe('for video bids', () => {
@@ -118,7 +187,15 @@ describe('ebdrBidAdapter', () => {
         const requests = spec.buildRequests(bidRequests);
         const bidRequest = {};
         bidRequest['23a01e95856577'] = { mediaTypes: VIDEO, w: null, h: null };
-        expect(requests.bids['23a01e95856577']).to.deep.equals(bidRequest['23a01e95856577']);
+        const data = {
+          id: '23a01e95856577',
+          video: {
+            w: null,
+            h: null
+          },
+          bidfloor: '1.00'
+        };
+        expect(requests.bids.imp[1]).to.deep.equals(data);
       });
 
       it('should create a GET request for each bid', () => {

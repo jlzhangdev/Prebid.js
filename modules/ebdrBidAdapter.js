@@ -8,7 +8,7 @@ export const spec = {
   isBidRequestValid: function(bid) {
     return !!(bid && bid.params && bid.params.zoneid);
   },
-  buildRequests: function(bids) {
+  buildRequests: function(bids, bidderRequest) {
     const rtbServerDomain = 'dsp.bnmla.com';
     let domain = window.location.host;
     let page = window.location.pathname + location.search + location.hash;
@@ -55,10 +55,16 @@ export const spec = {
         ifa: ebdrParams.ifa
       }
     };
+    if (bidderRequest && bidderRequest.gdprConsent) {
+      ebdrParams['consent_string'] = bidderRequest.gdprConsent.consentString;
+      ebdrParams['consent_required'] = (typeof bidderRequest.gdprConsent.gdprApplies === 'boolean') ? bidderRequest.gdprConsent.gdprApplies : true
+      ebdrBidReq['regs'] = {ext: { gdpr: ebdrParams['consent_required'] }}
+      ebdrBidReq['user'] = {ext: { consent: ebdrParams['consent_string'] }}
+    }
     return {
       method: 'GET',
       url: '//' + rtbServerDomain + '/hb?' + '&zoneid=' + zoneid + '&br=' + encodeURIComponent(JSON.stringify(ebdrBidReq)),
-      bids: ebdrReq
+      bids: ebdrBidReq
     };
   },
   interpretResponse: function(serverResponse, bidRequest) {
